@@ -6,7 +6,7 @@ i dont rly remember what i was gonna do, but i imma try anyway
 
 import random
 from copy import deepcopy
-import keyboard # requires sudo # had to change vsc's python to my ./.venv/bin/python one
+import keyboard # requires sudo # had to change vsc's python to the ./.venv/bin/python one
 import time
 
 def sgn(x:int)->int:
@@ -21,10 +21,9 @@ def checkTabAtXY(tab:list[list[int]],x:int,y:int)->None:
             checkTabAtXY(tab,x+1,y)
             checkTabAtXY(tab,x,y-1)
             checkTabAtXY(tab,x-1,y)
-    except: pass    
+    except: pass
 
 def d7n(X0orY1:int,c0:int)->str:
-    with open("/home/mateusz/Pulpit/temp.txt",'a') as f: f.write(f"x-0 or y-1: \x1b[1;35m{X0orY1};\x1b[0m\t c0: \x1b[1;35m{c0}\x1b[0m\n")
     if X0orY1%2:
         return 'w' if sgn(c0)>0 else 's'
     return 'd' if sgn(c0)>0 else 'a'
@@ -35,7 +34,7 @@ class Mapa:
     nap: int # Number of APples
     tab: list[list[int]] # game TABle
     def __init__(self,hei,wid,nap):
-        self.hei = hei 
+        self.hei = hei
         self.wid = wid
         self.nap = nap
         self.tab = [[0 for y in range(hei)] for x in range(wid)]
@@ -109,11 +108,12 @@ class Snake:
         else:
             del self.body[0]
             self.body.append(self.nextPosition())
-    def setHeading2(self, o_snakes:list[Snake])->None:
-        """finds best move for opposing snakes and sets their heading to such. 2nd attempt. this is the core of AI"""
+    def setHeading(self, o_snakes:list[Snake])->None:
+        """finds best move for opposing snakes and sets their heading to such. 2nd attempt. this is the core of so-called AI"""
         starting_heading = self.head
         prefDir = ""
         tab = deepcopy(self.mapa.tab)
+        hx,hy=self.body[-1]
         tab = [[-2 for x in range(self.mapa.wid+2)],*[[-2, *y, -2] for y in tab],[-2 for x in range(self.mapa.wid+2)]]
         for o_s in o_snakes:
             try:
@@ -123,16 +123,16 @@ class Snake:
             for el in o_b:
                 x,y=el[0]+1,el[1]+1
                 tab[x][y]-=2
-        for el in self.body:
+        for el in self.body[:-1]:
             x,y=el[0]+1,el[1]+1
             tab[x][y]-=2
-        with open("/home/mateusz/Pulpit/temp.txt",'a') as f: f.writelines('\n'.join([str(_) for _ in list(zip(*tab))]).replace(',','').replace('0','· ').replace('1','1 ').replace('-1 ','-1')+'\n')
+        surrounding1 = [tab[hx+1][hy],tab[hx+2][hy+1],tab[hx+1][hy+2],tab[hx][hy+1]]
+        minus2everywhere = sum(surrounding1)==-8
         for x in range(1,self.mapa.wid+1):
             for y in range(1,self.mapa.hei+1):
                 checkTabAtXY(tab,x,y)
-        with open("/home/mateusz/Pulpit/temp.txt",'a') as f: f.writelines('\n'.join([str(_) for _ in list(zip(*tab))]).replace(',','').replace('0','· ').replace('1','1 ').replace('-1 ','-1')+'\n')
+        surrounding2 = [tab[hx+1][hy],tab[hx+2][hy+1],tab[hx+1][hy+2],tab[hx][hy+1]]
         applesRel:list[tuple[int,int]]=[]
-        hx,hy=self.body[-1]
         for x in range(1,self.mapa.wid+1):
             for y in range(1,self.mapa.hei+1):
                 if tab[x][y]==1:
@@ -140,92 +140,18 @@ class Snake:
         try:
             closestA = min(applesRel,key=lambda a: a[0]**2+a[1]**2)
             cc = 1 if abs(closestA[1])<abs(closestA[0]) else 0 # closer coordinate
-            with open("/home/mateusz/Pulpit/temp.txt",'a') as f: f.write(f"cc:\x1b[1;33m{cc}\x1b[0m\n")
-            with open("/home/mateusz/Pulpit/temp.txt",'a') as f: f.write(f"d7n(cc-1,closestA[cc])={d7n(cc-1,closestA[cc])};\td7n(cc,closestA[cc])={d7n(cc,closestA[cc])}\n")
-            prefDir+=d7n(cc-1,closestA[cc-1])
             if closestA[cc]:
                 prefDir+=d7n(cc,closestA[cc])
+            prefDir+=d7n(cc-1,closestA[cc-1])
         except:
             prefDir = ""
-        with open("/home/mateusz/Pulpit/temp.txt",'a') as f: f.write(f"prefDir of {self}: \x1b[1;33m{prefDir}\x1b[0m; apples list: {applesRel}\n")
-        surrounding = [tab[x][y-1],tab[x+1][y],tab[x][y+1],tab[x-1][y]]
         finalDirection = starting_heading
+        surrounding = surrounding1 if minus2everywhere else surrounding2
         for d in prefDir+'wasd':
             if surrounding['wdsa'.index(d)]>=0:
                 finalDirection=d
                 break
         self.head=finalDirection
-    def setHeading(self, o_snakes:list[Snake])->None:
-        """finds the best heading for opposing snakes and sets to it.
-        core of AI movement"""
-        starting_heading = self.head
-        preferredDirections = ""
-        dangerousXY:list[tuple[int,int]] = []
-        for o_snake in o_snakes:
-            try:
-                if o_snake.isEating():
-                    dangerousXY.append([*o_snake.body,o_snake.nextPosition()])
-                else:
-                    dangerousXY.append([*o_snake.body[1:],o_snake.nextPosition()])
-            except:
-                dangerousXY.append([*o_snake.body,o_snake.nextPosition()])
-        dangerousXY.append([*self.body])
-        dangerousXY = [_1 for _2 in dangerousXY for _1 in _2]
-        apples = []
-        for x in range(self.mapa.wid):
-            for y in range(self.mapa.hei):
-                if self.mapa.tab[x][y] == 1:
-                    apples.append((x,y))
-        myHX, myHY = self.body[-1]
-        distToApples = [[myHX-a[0],myHY-a[1]] for a in apples]
-        distToApples.sort(key=lambda a: abs(a[0])+abs(a[1]))
-        closestApple=distToApples[0]
-        if min(abs(closestApple[0]),abs(closestApple[1]))==abs(closestApple[0]): # najbliżej po x
-            if closestApple[0]>0:
-                preferredDirections+='a'
-                if closestApple[1]>0:
-                    preferredDirections+='wds'
-                else:
-                    preferredDirections+='sdw'
-            elif closestApple[0]<0:
-                preferredDirections+='d'
-                if closestApple[1]>0:
-                    preferredDirections+='was'
-                else:
-                    preferredDirections+='saw'
-            else:
-                if closestApple[1]>0:
-                    preferredDirections+='wdas'
-                else:
-                    preferredDirections+='sdaw'
-        else: # najbliżej po y
-            if closestApple[1]>0:
-                preferredDirections+='w'
-                if closestApple[0]>0:
-                    preferredDirections+='asd'
-                else:
-                    preferredDirections+='dsa'
-            elif closestApple[1]<0:
-                preferredDirections+='s'
-                if closestApple[0]>0:
-                    preferredDirections+='awd'
-                else:
-                    preferredDirections+='dwa'
-            else:
-                if closestApple[0]>0:
-                    preferredDirections+='aswd'
-                else:
-                    preferredDirections+='dswa'
-        for h in preferredDirections:
-            self.head = h
-            if self.nextPosition() in dangerousXY:
-                continue
-            try:
-                test=self.mapa.tab[self.nextPosition()[0]][self.nextPosition()[1]]
-                return
-            except:
-                continue
-        self.head=starting_heading
 
 def printFrame(snake:Snake,o_snakes:list[Snake]):
     wid = snake.mapa.wid
@@ -259,8 +185,6 @@ def printFrame(snake:Snake,o_snakes:list[Snake]):
         lay=lay.replace("D","\x1b[1;35m-<\x1b[0m")
         frame+="##"+lay+"##\n"
     print(frame+"##"*(wid+2))
-    with open("/home/mateusz/Pulpit/temp.txt",'a') as f: f.write('\n\n\n\n'+frame[44:]+"##"*(wid+2)+'\n')
-
 
 def getStartingInfo()->list[int]:
     try:
@@ -320,7 +244,6 @@ for i in range(AI):
 myMapa.gen1stApples(mySnake.body,opponentSnakes)
 keys=set()
 print('\n'*(myMapa.hei+2))
-with open("/home/mateusz/Pulpit/temp.txt",'w') as f: f.write(f"my snake: {mySnake}; opponent snake: {opponentSnakes[0]}\n\n\n")
 printFrame(mySnake,opponentSnakes)
 ### main loop ###
 while True:
@@ -338,7 +261,7 @@ while True:
     for opponentSnake in opponentSnakes:
         hisRivals = list(set([*opponentSnakes,mySnake])-set([opponentSnake]))
         if opponentSnake.dead: continue
-        opponentSnake.setHeading2(hisRivals)
+        opponentSnake.setHeading(hisRivals)
         opponentSnake.checkIfDead(hisRivals)
         if opponentSnake.dead: continue
         opponentSnake.move(hisRivals)
