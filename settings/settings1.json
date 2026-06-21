@@ -1,0 +1,7 @@
+{
+	"map_width": 10,
+	"map_height": 10,
+	"number_of_apples": 1,
+	"number_of_computer_opponents": 0,
+	"time_for_player_to_move": 0.5
+}

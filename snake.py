@@ -8,6 +8,8 @@ import random
 from copy import deepcopy
 import keyboard # requires sudo # had to change vsc's python to the ./.venv/bin/python one
 import time
+from glob import glob
+import json
 
 def sgn(x:int)->int:
     """return the sign of an int: -1, 0, 1"""
@@ -187,23 +189,29 @@ def printFrame(snake:Snake,o_snakes:list[Snake]):
         frame+="##"+lay+"##\n"
     print(frame+"##"*(wid+2))
 
-def getStartingInfo()->list[int]:
+def getWidthInfo()->int:
     try:
         wid = int(input("Map's width (default=10): "))
         wid = abs(wid)*wid//wid
     except:
         wid = 10
+    return wid
+
+def getHeightInfo()->int:
     try:
         hei = int(input("Map's height (default=10): "))
         hei = abs(hei)*hei//hei
     except:
         hei = 10
+    return hei
+
+def getApplesInfo()->int:
     try:
         nap = int(input("Number of apples on the map (default=1): "))
         nap = abs(nap)*nap//nap
     except:
         nap = 1
-    return [hei,wid,nap]
+    return nap
 
 def getAiSnakeInfo()->int:
     try:
@@ -242,14 +250,33 @@ def checkIfWon(arg:list[Snake]|Snake)->bool:
                 return False
         return True
 
+def getAllSettings()->list[int|float]:
+    allSettings = ['map_width','map_height','number_of_apples','number_of_computer_opponents','time_for_player_to_move']
+    allGetFunctions = [getWidthInfo, getHeightInfo, getApplesInfo, getAiSnakeInfo, getSleepTime]
+    allInfo = [-1,-1,-1,-1,-1.0]
+    allSettingsFiles = glob('./settings/settings?.json')
+    if allSettingsFiles:
+        settingsId = input("ID of settings to load: ")
+        if f"./settings/settings{settingsId}.json" in allSettingsFiles:
+            with open(f"settings/settings{settingsId}.json","r") as file:
+                settings:dict = json.load(file)
+                for setting in allSettings:
+                    if setting in settings.keys():
+                        allInfo[allSettings.index(setting)] = settings[setting]
+                for i in range(len(allInfo)):
+                    if allInfo[i]<0:
+                        allInfo[i] = allGetFunctions[i]()
+            return allInfo
+    for i in range(len(allInfo)):
+        allInfo[i]=allGetFunctions[i]()
+    return allInfo
+
 ## setup ###
-info = getStartingInfo()
-AI = getAiSnakeInfo()
-sleepTime = getSleepTime()
-myMapa = Mapa(*info)
+gameSettings = getAllSettings()
+myMapa = Mapa(*gameSettings[:3])
 mySnake = Snake([(1,1),(2,1),(3,1)],myMapa,'d')
 opponentSnakes:list[Snake]=[]
-for i in range(AI):
+for i in range(gameSettings[3]):
     opponentSnakes.append(Snake([[(myMapa.wid-2,myMapa.hei-2),(myMapa.wid-3,myMapa.hei-2),(myMapa.wid-4,myMapa.hei-2)],[(myMapa.wid-2,1),(myMapa.wid-2,2),(myMapa.wid-2,3)],[(2,myMapa.hei-2),(2,myMapa.hei-3),(2,myMapa.hei-4)]][i],myMapa,'asw'[i]))
 myMapa.gen1stApples(mySnake.body,opponentSnakes)
 keys=set()
@@ -258,7 +285,7 @@ printFrame(mySnake,opponentSnakes)
 ### main loop ###
 while True:
     for i in range(10):
-        time.sleep((sleepTime+sleepTime**(len(mySnake.body)+1))/10)
+        time.sleep((gameSettings[4]+gameSettings[4]**(len(mySnake.body)+1))/10)
         keys = pressedKeys()-keys
         if len(keys) == 0:
             continue
@@ -276,7 +303,7 @@ while True:
         if opponentSnake.dead: continue
         opponentSnake.move(hisRivals)
     printFrame(mySnake,opponentSnakes)
-    if checkIfWon(opponentSnakes if AI else mySnake):
+    if checkIfWon(opponentSnakes if gameSettings[3] else mySnake):
         print(f"\r{' '*20}\nYou won!")
         raise SystemExit
 print(f'\r{' '*20}\nGame over! Your lenght: {len(mySnake.body)}')
