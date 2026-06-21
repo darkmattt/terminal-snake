@@ -126,12 +126,13 @@ class Snake:
         for el in self.body[:-1]:
             x,y=el[0]+1,el[1]+1
             tab[x][y]-=2
+        tab[self.body[-1][0]+1][self.body[-1][1]+1] = 0 # sets position at snake's head to 0 so it doesn't block surrounding squares
         surrounding1 = [tab[hx+1][hy],tab[hx+2][hy+1],tab[hx+1][hy+2],tab[hx][hy+1]]
-        minus2everywhere = sum(surrounding1)==-8
         for x in range(1,self.mapa.wid+1):
             for y in range(1,self.mapa.hei+1):
                 checkTabAtXY(tab,x,y)
         surrounding2 = [tab[hx+1][hy],tab[hx+2][hy+1],tab[hx+1][hy+2],tab[hx][hy+1]]
+        minus2everywhere = sum(surrounding2)==-8
         applesRel:list[tuple[int,int]]=[]
         for x in range(1,self.mapa.wid+1):
             for y in range(1,self.mapa.hei+1):
