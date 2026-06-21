@@ -214,6 +214,14 @@ def getAiSnakeInfo()->int:
         ans = 0
     return ans
 
+def getSleepTime()->float:
+    try:
+        ans = float(input("Time for the player to move (default=0.5): "))
+        if not 0<ans<1: ans = .5
+    except:
+        ans = .5
+    return ans
+
 def pressedKeys()->set:
     ret = set()
     if keyboard.is_pressed('left'): ret.add('a')
@@ -237,6 +245,7 @@ def checkIfWon(arg:list[Snake]|Snake)->bool:
 ## setup ###
 info = getStartingInfo()
 AI = getAiSnakeInfo()
+sleepTime = getSleepTime()
 myMapa = Mapa(*info)
 mySnake = Snake([(1,1),(2,1),(3,1)],myMapa,'d')
 opponentSnakes:list[Snake]=[]
@@ -249,7 +258,7 @@ printFrame(mySnake,opponentSnakes)
 ### main loop ###
 while True:
     for i in range(10):
-        time.sleep((.5+.4**len(mySnake.body))/10)
+        time.sleep((sleepTime+sleepTime**(len(mySnake.body)+1))/10)
         keys = pressedKeys()-keys
         if len(keys) == 0:
             continue
